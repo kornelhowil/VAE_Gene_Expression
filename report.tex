@@ -1,0 +1,236 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, natbib, graphicx, enumerate, tikz, float, amsthm, verbatim, marvosym, physics, subfig}
+\usepackage{hyperref}
+\usetikzlibrary{patterns}
+\usetikzlibrary{arrows.meta}
+\usepackage[a4paper, total={7in, 10.5in}]{geometry}
+
+\begin{document}
+
+\title{Statistical Analysis II: Project 1 report}
+
+\author{Kornel Howil}
+
+\date{\today}
+
+\maketitle
+
+\section{Exploration}
+\subsection*{a)} The training data contains 72208 observations of 5000 variables. The test data contains 18052 observations of 5000 variables.
+
+\subsection*{b)} The figures below show histograms of the training data.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.7]{plots/histogram_full.pdf}
+    \caption{Histograms of the raw data (left) and the preprocessed data (right).}
+    \label{fig1}
+\end{figure}
+
+\subsection*{c)} 
+Each observation in the preprocessed data corresponds to the same row in raw data multiplied by a constant number. According to the description of the dataset \cite{data}, this constant number is a size factor calculated using \textit{scran} \cite{scran}.
+
+\subsection*{d)} The figures below show histograms of the training data after removing all zero values.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.7]{plots/histogram_no_zeros.pdf}
+    \caption{Histograms of the raw data (left) and the preprocessed data (right) after removing all zero values.}
+    \label{fig2}
+\end{figure}
+
+\subsection*{e)}
+The data comes from a distribution with an abundance of zeros. A raw dataset consists of integers hence data may come from a geometric distribution. The abundance of zeroes can mean that the cells are highly specialized and strongly differ from each other in the means of the task they fulfill and the sturcture they have.
+\subsection*{f)}
+\texttt{adata.obs} contains gene expression observation metadata i.e. data about the gene expression dataset \cite{data}. From this metadata, we can learn that the dataset consist the data from
+\begin{enumerate}
+    \item 4 labs (\texttt{andata.obs["Site"]})
+    \item 8 patients (\texttt{andata.obs["DonorID"]})
+    \item 45 cell types (\texttt{andata.obs["cell\_type"]})
+\end{enumerate}
+
+
+\section{Vanilla VAE training}
+\subsection*{a)}
+In a vanilla VAE implemented during Lab 6 and Lab 7, the encoder (Tab \ref{encoder1}) returns \texttt{latent\_dim} means and \texttt{latent\_dim} variances. Then, by using reparameterization trick, values from the latent space are sampled from normal distributions defined by the output of the encoder.
+For the decoder, we assumed that each value of scRNA-seq data comes from a gaussian distribution with variance equal to one and mean equal to the output of the decoder. Loss is defined as
+\begin{equation}
+    \text{Loss}(Data) = -\text{ELBO} = \sum_{i = 1}^{5000} \log{\text{Normal}(x_i, \mu_i)}-\beta \cdot \texttt{KL}(N(z), N(0, \mathbf{1})),
+\end{equation}
+where $Data = (x_1, x_2, ..., x_{5000})$, $z = (\mu, \sigma)$ is a vector of size \texttt{latent\_dim} sampled from distribution defined by an output of the encoder and $\log{\text{Normal}(x_i, \mu_i)}$ is log likelihood of a value $x_i$ coming from normal distribution with mean $\mu_i$ (output of the decoder) and variance 1.
+\begin{table}[H]
+\centering
+\begin{tabular}{|l l l l l|}
+\hline
+ \textbf{Layer} & \textbf{Type} &  \textbf{Activation} &  \textbf{Input} &  \textbf{Output} \\ \hline
+ 1 & Full &   &  5000 &  2000 \\ \
+  & BN &   &   &    \\ \
+  & Dropout &  ReLU &   &    \\ \hline
+ 2 & Full &   &  2000 &  1500 \\ \
+  & BN &   &   &   \\ \
+  & Dropout &  ReLU &   &    \\ \hline
+ 3 & Full &   &  1500 &  1000 \\ \
+  & BN &   &   &   \\ \
+  & Dropout &  ReLU &   &    \\ \hline
+ 4.1 & Full &   &  1000 &  \texttt{latent\_dim}\\ \hline
+ 4.2 & Full &  $\text{Softplus} + \varepsilon$ &  1000 &  \texttt{latent\_dim} \\ \hline
+\end{tabular}
+\caption{The architecture of the encoder. The activation function was applied after a given layer. The output of layer 4.1 is a mean of the distribution in the latent space and the output of layer 4.2 is a variance of the distribution in the latent space. Constant value $\varepsilon$ was set to $10^{-4}$.}
+\label{encoder1}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l l l l l|}
+\hline
+ \textbf{Layer} & \textbf{Type} &  \textbf{Activation} &  \textbf{Input} &  \textbf{Output} \\ \hline
+ 1 & Full &   &  \texttt{latent\_dim} &  1000 \\ \
+   & BN &   &   &    \\ \
+   & Dropout &  ReLU &   &    \\ \hline
+ 2 & Full &   &  1000 &  1500 \\ \
+   & BN &   &   &   \\ \
+   & Dropout &  ReLU &   &    \\ \hline
+ 3 & Full &   &  1500 &  2000 \\ \
+   & BN &   &   &   \\ \
+   &Dropout &  ReLU &   &    \\ \hline
+ 4 & Full &  ReLU &  2000 &  5000 \\ \hline
+\end{tabular}
+\caption{The architecture of the decoder. The activation function was applied after a given layer.}
+\label{decoder1}
+\end{table}
+\noindent On the Figure \ref{VAE1} there is a learning curve of a Vanilla VAE trained with $\beta = 1$ and $\texttt{latent\_dim}=50$. Figure \ref{VAE2} shows reconstruction and regularization losses of the same model.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.9]{Plots/VanillaVAE_50.pdf}
+    \caption{Learning curve of Vanilla VAE trained with $\beta=1$ and  $\texttt{latent\_dim}=50$.}
+    \label{VAE1}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.7]{Plots/VanillaVAE_50_both.pdf}
+    \caption{Regularization and reconstruction losses of Vanilla VAE trained with $\beta=1$ and  $\texttt{latent\_dim}=50$.}
+    \label{VAE2}
+\end{figure}
+
+\subsection*{b)}
+PCA was fitted on a test set encoded using a trained model using $\beta=1$ and $\texttt{latent\_dim}=50$.
+More than $95\%$ of the variance is explained by at least 4 PCA components. Figure \ref{PCA1} shows how many PCA components is needed to explain a given amount of variance.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.9]{Plots/VanillaVAE_PCA_components.pdf}
+    \caption{Ratio of explained variance in function of PCA components. PCA was fitted on a test set using Vanilla VAE trained with $\beta = 1$ and $\texttt{latent\_dim}=50$.}
+    \label{PCA1}
+\end{figure}
+\noindent To check how \texttt{latent\_dim} affects -ELBO, a model was trained 3 times using different values of \texttt{latent\_dim}. Results of the final performance on a test set are shown in the table \ref{PCATab}.
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+ \textbf{\texttt{latent\_size}} & \textbf{-ELBO} \\ \hline
+ 50 & $\sim7.6\cdot10^{4}$  \\ \hline
+ 10 & $\sim7.0\cdot10^{4}$  \\ \hline
+ 5 & $\sim7.5\cdot10^{4}$  \\ \hline
+\end{tabular}
+\caption{The architecture of the decoder. The activation function was applied after a given layer.}
+\label{PCATab}
+\end{table}
+
+\subsection*{c)}
+Figures \ref{PCA2}, \ref{PCA3} and \ref{PCA3} show the test set encoded using three models with different \texttt{latent\_dim}, projected on the top two PCA components.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.9]{Plots/VanillaVAE_PCA_50.pdf}
+    \caption{Encoded test set projected on the top two PCA components. Model trained with $\beta=1$ and $\texttt{latent\_dim}=50$. Colours represent different cell types.}
+    \label{PCA2}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.9]{Plots/VanillaVAE_PCA_10.pdf}
+    \caption{Encoded test set projected on the top two PCA components. Model trained with $\beta=1$ and $\texttt{latent\_dim}=10$. Colours represent different cell types. }
+    \label{PCA3}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.9]{Plots/VanillaVAE_PCA_5.pdf}
+    \caption{Encoded test set projected on the top two PCA components. Model trained with $\beta=1$ and $\texttt{latent\_dim}=5$. Colours represent different cell types. }
+    \label{PCA4}
+\end{figure}
+
+\subsection*{d)}
+I have used a raw dataset for all models. I am not sure why but when I trained my network on a preprocessed data a test loss was much higher than a train loss. I think that this may be due to the specific normalization technique, which was used on this data.
+
+\section{Custom decoder}
+
+\subsection*{a)}
+Since the raw dataset (which was used in training) contains only integer values, I used the Poisson distribution to calculate the log-likelihood of data knowing the output of the decoder. The new loss was defined as
+\begin{equation}
+    \text{Loss}(Data) = -\text{ELBO} = \sum_{i = 1}^{5000} \log{\text{Poisson}(x_i, \lambda_i + \varepsilon)}-\beta \cdot \texttt{KL}(N(z), N(0, \mathbf{1})),
+\end{equation}
+where $\lambda_i$ (output of the decoder) is a rate defining Poisson distribution. Constant $\epsilon=1e-4$ was added to the output of the decoder, because since ReLU was used on the output layer, some output values were 0.
+\subsection*{b)}
+VAE with custom decoder was trained on the raw dataset using $\beta=1$ and $\texttt{latent\_dim}=10$. Size of the latent space was chosen to be the same as in best Vanilla VAE model. Figure \ref{VAE:comp} shows learning curves for both best Gaussian VAE model and Poisson VAE.
+\begin{figure}[H]
+    \centering
+    \subfloat[\centering Gaussian VAE]{{\includegraphics[width=8cm]{Plots/VanillaVAE_10.pdf} }}%
+    \qquad
+    \subfloat[\centering Poisson]{{\includegraphics[width=8cm]{Plots/CustomVAE_10.pdf} }}%
+    \caption{Learning curves for both Gaussian VAE (left) and Poisson VAE (right). Both models were trained using $\beta=1$ and $\texttt{latent\_dim}=10$.}%
+    \label{VAE:comp}
+\end{figure}
+\noindent Vanilla VAE has a steeper learning curve in the first few iterations but later learning is rapidly slowing down. On the other hand VAE with a custom decoder is learning in more stable way. The most important part of comparison of this to models is value of -ELBO. Figure \ref{VAE:comp} clearly shows that -ELBO of VAE with a custom decoder is over 10 times smaller than -ELBO of the model with basic gaussian decoder. The new decoder is clearky better. 
+
+\subsection*{c)}
+Figure \ref{VAE:PCAcomp} shows encoded test set projected on the top two PCA components of the model with a gaussian decoder and the model with a custom decoder.
+\begin{figure}[H]
+    \centering
+    \subfloat[\centering Gaussian VAE]{{\includegraphics[width=8cm]{Plots/VanillaVAE_PCA_10.pdf} }}%
+    \qquad
+    \subfloat[\centering Poisson VAE]{{\includegraphics[width=8cm]{Plots/CustomVAE10_PCA_cell_type.pdf} }}%
+    \caption{Encoded test set projected on the top two PCA components of the Gaussian VAE (left) and the Poisson VAE (right). Colours represents different cell types.}%
+    \label{VAE:PCAcomp}
+\end{figure}
+\noindent It is clearly visible that these two plots differ from each other much more that plots for Vanilla VAE with different size of the latent space (Figures \ref{PCA1}, \ref{PCA2}, \ref{PCA3}). Range of the values on the top two PCA components is smaller for the VAE with custom decoder.
+
+\section{Adjusting VAE for batch effect}
+\subsection*{a)}
+Figures \ref{VAE:PCAbatch}, \ref{VAE:PCADonorID}, \ref{VAE:PCASite} shows encoded test set projected on the top two PCA components of the both VAEs. The colors represents respectively Batch, \texttt{DonorID} and Site.
+\begin{figure}[H]
+    \centering
+    \subfloat[\centering Gaussian VAE]{{\includegraphics[width=8cm]{Plots/VanillaVAE10_PCA_batch.pdf} }}%
+    \qquad
+    \subfloat[\centering Poisson VAE]{{\includegraphics[width=8cm]{Plots/CustomVAE10_PCA_batch.pdf} }}%
+    \caption{Encoded test set projected on the top two PCA components of the Vanilla VAE (left) and the VAE with custom decoder (right). Colours represents different batch.}%
+    \label{VAE:PCAbatch}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \subfloat[\centering Gaussian VAE]{{\includegraphics[width=8cm]{plots/VanillaVAE10_PCA_DonorID.pdf} }}%
+    \qquad
+    \subfloat[\centering Poisson VAE]{{\includegraphics[width=8cm]{plots/CustomVAE10_PCA_DonorID.pdf} }}%
+    \caption{Encoded test set projected on the top two PCA components of the Vanilla VAE (left) and the VAE with custom decoder (right). Colours represents different \texttt{DonorID}.}%
+    \label{VAE:PCADonorID}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \subfloat[\centering Gussian VAE]{{\includegraphics[width=8cm]{Plots/VanillaVAE10_PCA_Site.pdf} }}%
+    \qquad
+    \subfloat[\centering Poisson VAE]{{\includegraphics[width=8cm]{Plots/CustomVAE10_PCA_Site.pdf} }}%
+    \caption{Encoded test set projected on the top two PCA components of the Vanilla VAE (left) and the VAE with custom decoder (right). Colours represents different site.}%
+    \label{VAE:PCASite}
+\end{figure}
+
+\begin{thebibliography}{9}
+\bibliographystyle{unsrt}
+\bibitem{data}
+    Description of the dataset,
+    \emph{\href{https://openproblems.bio/neurips_docs/data/dataset/}{https://openproblems.bio/neurips\_docs/data/dataset/}}
+
+\bibitem{scran}
+    L. Lun, A.T., Bach, K. \& Marioni, J.C. Pooling across cells to normalize 
+    single-cell RNA sequencing data with many zero counts. Genome Biol 17, 75 (2016),
+    \emph{\href{https://doi.org/10.1186/s13059-016-0947-7}{https://doi.org/10.1186/s13059-016-0947-7}}
+
+\end{thebibliography}
+\end{document}
