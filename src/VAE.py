@@ -37,9 +37,9 @@ class VAE(nn.Module):
         Parameters
         ----------
         mu : torch.Tensor
-            1D Tensor of size n with means to be used in sampling.
+            1D or 2D  Tensor of size n with means to be used in sampling.
         var : torch.Tensor
-            1D Tensor of size n with variances to be used in sampling.
+            1D or 2D Tensor of size n with variances to be used in sampling.
 
         Returns
         ----------
@@ -63,9 +63,9 @@ class VAE(nn.Module):
         Parameters
         ----------
         mu : torch.Tensor
-            1D Tensor of size n with means defining distribution.
+            1D or 2D Tensor of size n with means defining distribution.
         var : torch.Tensor
-            1D Tensor of size n with variances defining distribution.
+            1D or 2D Tensor of size n with variances defining distribution.
 
         Returns
         ----------
@@ -89,7 +89,7 @@ class VAE(nn.Module):
         Parameters
         ----------
         data : torch.Tensor
-            1D Tensor of size n with means defining distribution.
+            1D or 2D Tensor of size n with means defining distribution.
         beta : int
             Positive integer used for scaling regularization loss.
 
@@ -115,7 +115,7 @@ class VAE(nn.Module):
         Parameters
         ----------
         z : torch.Tensor
-            1D Tensor of number in the latent space.
+            1D or 2D tensor of number in the latent space.
             Dimension must agree with the first layer of the decoder.
 
         Returns
@@ -138,13 +138,13 @@ class VAE(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            2D Tensor in the input space.
+            1D or 2D Tensor in the input space.
             Dimensions must agree with the first layer of the encoder.
 
         Returns
         ----------
         torch.Tensor
-            1D tensor in latent space calculated from tensor in input space.
+            1D or 2D tensor in latent space calculated from tensor in input space.
             Has the same size as the last layer of the encoder.
         """
         with torch.no_grad():
@@ -163,7 +163,7 @@ class VAE(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            2D Tensor in the input space.
+            1D or 2D Tensor in the input space.
             Dimensions must agree with the first layer of the encoder.
 
         Returns
