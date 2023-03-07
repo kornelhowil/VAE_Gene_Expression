@@ -5,7 +5,8 @@ from src.Decoder import Decoder
 class CustomDecoder(Decoder):
     @staticmethod
     def log_prob(x: torch.Tensor,
-                 p: torch.Tensor):
+                 p: torch.Tensor
+                 ) -> torch.Tensor:
         """
         Calculated log probability.
 
