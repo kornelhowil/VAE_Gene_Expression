@@ -3,6 +3,9 @@
 # Variational Autoencoder for gene expression data
 Implemented using PyTorch for Statistical Data Analysis 2 class at University of Warsaw.
 
+Original paper about VAE:
+
+Kingma, D. P. & Welling, M. (2014), Auto-Encoding Variational Bayes, in '2nd International Conference on Learning Representations, ICLR 2014, Banff, AB, Canada, April 14-16, 2014, Conference Track Proceedings' .
 # Project overview
 Project overview can be seen in `project_overview.pdf`.
 
