@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Decoder(nn.Module):
     def __init__(self,
-                 sizes: tuple
+                 sizes: list
                  ) -> None:
         """
         Initializes Decoder object.
