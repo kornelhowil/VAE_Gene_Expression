@@ -1,5 +1,7 @@
+[![python](https://img.shields.io/badge/Python-3.9-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![pytorch](https://img.shields.io/badge/PyTorch-1.14.0-EE4C2C.svg?style=flat&logo=pytorch)](https://pytorch.org)
 # Variational Autoencoder for gene expression data
-Implemented for Statistical Data Analysis 2 class at University of Warsaw.
+Implemented using PyTorch for Statistical Data Analysis 2 class at University of Warsaw.
 
 # Project overview
 Project overview can be seen in `project_overview.pdf`.
