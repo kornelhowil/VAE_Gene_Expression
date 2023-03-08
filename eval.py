@@ -8,15 +8,39 @@ import scanpy as sc
 import os
 
 
-def read_adata():
-    train_path = 'data/SAD2022Z_Project1_GEX_train.h5ad'
-    test_path = 'data/SAD2022Z_Project1_GEX_test.h5ad'
+def read_adata(train_path: str,
+               test_path: str
+               ) -> tuple[sc.AnnData, sc.AnnData]:
+    """
+    Read train and test data.
+
+    Parameters
+    ----------
+    train_path : str
+        Path to the train data.
+    test_path : str
+        Path to the test data.
+
+    Returns
+    ----------
+    tuple[sc.AnnData, sc.AnnData]
+        Tuple of train data and test data.
+    """
     train_adata = sc.read_h5ad(train_path)
     test_adata = sc.read_h5ad(test_path)
     return train_adata, test_adata
 
 
-def first_histplot(train_adata):
+def first_histplot(train_adata: sc.AnnData
+                   ) -> None:
+    """
+    Plots a histogram of the training data.
+
+    Parameters
+    ----------
+    train_adata : str
+        Adata object with training data.
+    """
     preprocessed = train_adata.X
     raw = train_adata.layers['counts']
 
@@ -40,7 +64,16 @@ def first_histplot(train_adata):
     plt.savefig('Plots/histogram_full.pdf')
 
 
-def second_histplot(train_adata):
+def second_histplot(train_adata: sc.AnnData
+                   ) -> None:
+    """
+    Plots a histogram of the training data but without zeros.
+
+    Parameters
+    ----------
+    train_adata : str
+        Adata object with training data.
+    """
     preprocessed = train_adata.X
     raw = train_adata.layers['counts']
     preprocessed_nz = preprocessed.toarray()[preprocessed.toarray() != 0]
@@ -66,7 +99,26 @@ def second_histplot(train_adata):
     plt.clf()
 
 
-def plot_pca(pca_var, test_adata, name, hue):
+def plot_pca(pca_var: np.array,
+             test_adata: sc.AnnData,
+             name: str,
+             hue: str
+             ) -> None:
+    """
+    Plots a PCA plot in the latent space using two dimensions which
+    explains the most variance.
+
+    Parameters
+    ----------
+    pca_var : np.array
+        Contains PCA data.
+    test_adata: sc.AnnData
+        Adata object with training data.
+    name: str
+        Name of the plot.
+    hue:
+        Name of the column used for coloring.
+    """
     f = plt.figure()
     f.set_figwidth(6.4)
     sns.set_theme()
@@ -77,7 +129,19 @@ def plot_pca(pca_var, test_adata, name, hue):
     plt.clf()
 
 
-def plot_model(name, test_adata):
+def plot_model(name: str,
+               test_adata: sc.AnnData
+               ) -> None:
+    """
+    Plots a various plots for a given model.
+
+    Parameters
+    ----------
+    name : str
+        Name of the model. Must match name of the model saved in Models directory.
+    test_adata: sc.AnnData
+        Adata object with test data.
+    """
     test_data = torch.Tensor(test_adata.layers['counts'].toarray())
     df = pd.read_csv(f'Models/{name}_losses.csv')
 
@@ -131,9 +195,9 @@ def main():
     if not os.path.exists('Plots'):
         os.mkdir('Plots')
 
-    train_adata, test_adata = read_adata()
-    print(train_adata)
-    print(test_adata)
+    train_path = 'data/SAD2022Z_Project1_GEX_train.h5ad'
+    test_path = 'data/SAD2022Z_Project1_GEX_test.h5ad'
+    train_adata, test_adata = read_adata(train_path, test_path)
 
     first_histplot(train_adata)
     second_histplot(train_adata)
