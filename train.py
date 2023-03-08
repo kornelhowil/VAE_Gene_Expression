@@ -4,6 +4,7 @@ from src.Decoder import Decoder
 from src.CustomDecoder import CustomDecoder
 import scanpy as sc
 import torch
+import torch.nn as nn
 from tqdm import tqdm
 import pandas as pd
 import os
@@ -11,15 +12,60 @@ import os
 torch.manual_seed(42)
 
 
-def read_adata():
-    train_path = 'data/SAD2022Z_Project1_GEX_train.h5ad'
-    test_path = 'data/SAD2022Z_Project1_GEX_test.h5ad'
+def read_adata(train_path: str,
+               test_path: str
+               ) -> tuple[sc.AnnData, sc.AnnData]:
+    """
+    Read train and test data.
+
+    Parameters
+    ----------
+    train_path : str
+        Path to the train data.
+    test_path : str
+        Path to the test data.
+
+    Returns
+    ----------
+    tuple[sc.AnnData, sc.AnnData]
+        Tuple of train data and test data.
+    """
     train_adata = sc.read_h5ad(train_path)
     test_adata = sc.read_h5ad(test_path)
     return train_adata, test_adata
 
 
-def train(data, model, optimizer, batch_size, epoch, beta):
+def train(data: torch.Tensor,
+          model: nn.Module,
+          optimizer: torch.optim.Optimizer,
+          batch_size: int,
+          epoch: int,
+          beta: int
+          ) -> tuple[float, float, float]:
+    """
+    Trains model for one epoch.
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        Training dataset.
+    model : nn.Module
+        Model to train.
+    optimizer : torch.optim.Optimizer
+        Optimizer used for training.
+    batch_size : int
+        Batch size.
+    epoch : int
+        Number of epoch.
+    beta : int
+        Integer used for scaling regularization loss.
+        Search betaVAE for more details.
+
+    Returns
+    ----------
+    tuple[float, float, float]
+        Tuple of total, regularization and reconstruction losses.
+    """
     model.train()
     permutation = torch.randperm(data.size()[0])
     train_loss = 0
@@ -42,7 +88,31 @@ def train(data, model, optimizer, batch_size, epoch, beta):
     return train_loss, train_kl_loss, train_recon_loss
 
 
-def test(data, model, epoch, beta):
+def test(data: torch.Tensor,
+         model: nn.Module,
+         epoch: int,
+         beta: int
+         ) -> tuple[float, float, float]:
+    """
+    Evaluated model performance.
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        Testing dataset.
+    model : nn.Module
+        Model to evaluate.
+    epoch : int
+        Number of epoch.
+    beta : int
+        Integer used for scaling regularization loss.
+        Search betaVAE for more details.
+
+    Returns
+    ----------
+    tuple[int, int, int]
+        Tuple of total, regularization and reconstruction losses.
+    """
     model.eval()
     with torch.no_grad():
         test_loss, test_kl_loss, test_recon_loss = model.loss_function(data, beta)
@@ -53,7 +123,33 @@ def test(data, model, epoch, beta):
     return test_loss.item(), test_kl_loss.item(), test_recon_loss.item()
 
 
-def train_VAE(model, train_data, test_data, name):
+def train_VAE(model: nn.Module,
+              train_data: torch.Tensor,
+              test_data: torch.Tensor,
+              name: str
+              ) -> None:
+    """
+    Trains VAE.
+
+    This functions trains VAE for 50 epochs using batch size equal to 512 and beta = 1.
+    Saves trained model to the Models directory using the name provided in name string.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Model to train.
+    train_data : torch.Tensor
+        Train dataset. 2D Tensor.
+    test_data : torch.Tensor
+        Test dataset. 2D Tensor.
+    name : str
+        Name of the model. Used for saving.
+
+    Returns
+    ----------
+    tuple[int, int, int]
+        Tuple of total, regularization and reconstruction losses.
+    """
     n_epochs = 50  # or whatever
     batch_size = 512  # or whatever
     beta = 1
@@ -91,7 +187,10 @@ def train_VAE(model, train_data, test_data, name):
 def main():
     if not os.path.exists('Models'):
         os.mkdir('Models')
-    train_adata, test_adata = read_adata()
+
+    train_path = 'data/SAD2022Z_Project1_GEX_train.h5ad'
+    test_path = 'data/SAD2022Z_Project1_GEX_test.h5ad'
+    train_adata, test_adata = read_adata(train_path, test_path)
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
